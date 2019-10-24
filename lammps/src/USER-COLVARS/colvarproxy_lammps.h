@@ -101,7 +101,10 @@ class colvarproxy_lammps : public colvarproxy {
   // implementation of pure methods from base class
  public:
 
-  inline cvm::real unit_angstrom() { return my_angstrom; };
+  // Request to set the units used internally by Colvars
+  int set_unit_system(std::string const &units_in, bool colvars_defined);
+  inline cvm::real backend_angstrom_value() { return my_angstrom; };
+//  inline cvm::real backend_kcal_mol_value() { return ; };
   inline cvm::real boltzmann() { return my_boltzmann; };
   inline cvm::real temperature() { return t_target; };
   inline cvm::real dt() { return my_timestep; }; // return _lmp->update->dt * _lmp->force->femtosecond; };
