@@ -22,7 +22,7 @@
 #endif
 
 namespace neuralnetworkCV {
-enum LayerType {DENSE, SELFATTENTION, INVALID};
+enum class LayerType {DENSE, SELFATTENTION, INVALID};
 /// mapping from a string to the activation function and its derivative
 extern std::map<std::string, std::pair<std::function<double(double)>, std::function<double(double)>>> activation_function_map;
 
@@ -198,10 +198,9 @@ private:
     std::vector<std::vector<double>> m_layers_output;
     std::vector<std::vector<std::vector<double>>> m_grads_tmp;
     std::vector<std::vector<double>> m_chained_grad;
-private:
+public:
     /// helper function: multiply two matrix constructed from 2D vector
     static std::vector<std::vector<double>> multiply_matrix(const std::vector<std::vector<double>>& A, const std::vector<std::vector<double>>& B);
-public:
     neuralNetworkCompute(): m_dense_layers(0), m_layers_output(0) {}
     neuralNetworkCompute(const std::vector<denseLayer>& dense_layers);
     bool addDenseLayer(const denseLayer& layer);

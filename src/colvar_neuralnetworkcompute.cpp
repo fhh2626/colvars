@@ -283,12 +283,7 @@ bool startswith(std::string long_str, std::string short_str)
 //create matrix with h rows and i columns
 std::vector<std::vector<double>> creatematrix(int h,int l, double initial=0)
 {
-	std::vector<std::vector<double>> v;
-	for (int i = 0; i < h; i++)
-	{
-		std::vector<double>v1(l,initial);
-		v.push_back(v1);
-	}
+	std::vector<std::vector<double>> v(h, std::vector<double>(l, initial));
 	return v;
 }
 //matrix plus
@@ -300,9 +295,7 @@ std::vector<std::vector<double>> plus(const std::vector<std::vector<double>>&A,c
     {
         std::cout<<("Matrix plus is not regular. ");
     }
-	std::vector<std::vector<double>> C;
-	C=creatematrix( h, l);
- 
+	std::vector<std::vector<double>> C=creatematrix( h, l); 
 	for(int i=0;i<h;i++)
 	{
 		for (int j = 0; j < l; j++)
@@ -323,11 +316,9 @@ std::vector<std::vector<double>> minus(const std::vector<std::vector<double>>&A,
 	int l=A[0].size();
     if(A.size()!=B.size()||A[0].size()!=B[0].size())
     {
-        std::cout<<("Matrix plus is not regular. ");
+        std::cout<<("Matrix minus is not regular. ");
     }
-	std::vector<std::vector<double>> C;
-	C=creatematrix( h, l);
- 
+	std::vector<std::vector<double>> C=creatematrix( h, l);
 	for(int i=0;i<h;i++)
 	{
 		for (int j = 0; j < l; j++)
@@ -404,7 +395,7 @@ std::vector<std::vector<std::vector<double>>> matmul(const std::vector<std::vect
     int d=A.size();
     for(int i=0;i<d;i++)
     {
-        AT.push_back(matmul(A[i],B[i]));
+        AT.push_back(neuralNetworkCompute::multiply_matrix(A[i], B[i]));
     }
     return AT;
 }
@@ -434,7 +425,7 @@ std::vector<std::vector<std::vector<double>>> multiply_num(const std::vector<std
     }
 	return B;
 }
-//vertical stack the matrix (not your vertical stick)
+//vertical stack the matrix
 std::vector<std::vector<double>> vstack(const std::vector<std::vector<double>>&A,const std::vector<std::vector<double>>&B)
 {
 	int A_h=A.size();
@@ -445,22 +436,9 @@ std::vector<std::vector<double>> vstack(const std::vector<std::vector<double>>&A
 	{
 		std::cout<<("ERROR: Matrix vertical stack error. vstack("+std::to_string(A_h)+"*"+std::to_string(A_l)+","+std::to_string(B_h)+"*"+std::to_string(B_l)+") is not compatible. \n");
 	}
-	std::vector<std::vector<double>> C=creatematrix(A_h+B_h,A_l);
-	for (int i = 0; i < A_h; i++)
-	{
-		for (int j = 0; j < A_l; j++)
-		{
-			C[i][j]=A[i][j];
-		}
-	}
-	for (int i = 0; i < B_h; i++)
-	{
-		for (int j = 0; j < B_l; j++)
-		{
-			C[i+A_h][j]=B[i][j];
-		}
-	}
-	return C;
+	auto C(A);
+    C.insert(C.end(), B.begin(), B.end());
+    return C;
 }
 //horizontal stack the matrix
 std::vector<std::vector<double>> hstack(const std::vector<std::vector<double>>&A,const std::vector<std::vector<double>>&B)
@@ -473,20 +451,10 @@ std::vector<std::vector<double>> hstack(const std::vector<std::vector<double>>&A
 	{
 		std::cout<<("ERROR: Matrix horizontal stack error. hstack("+std::to_string(A_h)+"*"+std::to_string(A_l)+","+std::to_string(B_h)+"*"+std::to_string(B_l)+") is not compatible. \n");
 	}
-	std::vector<std::vector<double>> C=creatematrix(A_h,A_l+B_l);
-	for (int i = 0; i < A_h; i++)
-	{
-		for (int j = 0; j < A_l; j++)
-		{
-			C[i][j]=A[i][j];
-		}
-	}
+	auto C(A);
 	for (int i = 0; i < B_h; i++)
 	{
-		for (int j = 0; j < B_l; j++)
-		{
-			C[i][j+A_l]=B[i][j];
-		}
+        C[i].insert(C[i].end(), B[i].begin(), B[i].end());
 	}
 	return C;
 }
@@ -509,7 +477,7 @@ std::vector<std::vector<double>> transpose(const std::vector<std::vector<double>
 std::vector<std::vector<std::vector<double>>> transpose(const std::vector<std::vector<std::vector<double>>>& A)
 {
 	std::vector<std::vector<std::vector<double>>> AT;
-	for(int i=0;i<A.size();i++)
+	for(unsigned int i=0;i<A.size();i++)
 	{
 		AT.push_back(transpose(A[i]));
 	}
@@ -533,7 +501,7 @@ void show_matrix(const std::vector<std::vector<double>> &A)
 std::vector<std::vector<double>> reshape(const std::vector<double>& A, int shape0,int shape1)
 {
     std::vector<std::vector<double>> AT=creatematrix(shape0,shape1);
-    if(A.size()/shape0!=shape1)
+    if(A.size()/shape0!=(unsigned int) shape1)
     {
         std::cout<<("ERROR: Invalid reshape with from one dimention to"+std::to_string(shape0)+"*"+std::to_string(shape1)+"\n");
         return AT;
@@ -551,7 +519,7 @@ std::vector<std::vector<double>> reshape(const std::vector<double>& A, int shape
 std::vector<std::vector<double>> reshape(const std::vector<std::vector<double>>& A, int shape0,int shape1)
 {
     std::vector<std::vector<double>> AT=creatematrix(shape0,shape1);
-    if(A.size()*A[0].size()/shape0!=shape1)
+    if(A.size()*A[0].size()/shape0!=(unsigned int)shape1)
     {
         std::cout<<("ERROR: Invalid reshape with from two dimention to"+std::to_string(shape0)+"*"+std::to_string(shape1)+"\n");
         return AT;
@@ -565,17 +533,15 @@ std::vector<std::vector<double>> reshape(const std::vector<std::vector<double>>&
     }
     return AT;
 }
-//from two dimention to one dimention, with shape0 equals to flattened variables. 
-//Notice that this is a specific function only applied into this model, because it is reversive. 
-//that is, to concatenate each seq_len*d_model matrix. 
-std::vector<double> concat(const std::vector<std::vector<double>>& A, int shape0)
+/**
+ * Unfold a 2D vector into 1D vector in column dominated order
+ * Normal function concat() in pytorch is to in row dominated order
+ * Notice that this is a specific function only applied into this model, because it is reversive. 
+ * that is, to concatenate each seq_len*d_model matrix. 
+*/
+std::vector<double> concat(const std::vector<std::vector<double>>& A)
 {
-    std::vector<double> AT(shape0);
-    if(A.size()*A[0].size()!=shape0)
-    {
-        std::cout<<("ERROR: Invalid concatenate with from two dimention to"+std::to_string(shape0)+" dimention\n");
-        return AT;
-    }
+    std::vector<double> AT(A.size()*A[0].size());
     int seq_len=A.size();
     int d_model=A[0].size();
 
@@ -598,7 +564,7 @@ std::vector<std::vector<std::vector<double>>> reshape(const std::vector<std::vec
     std::vector<std::vector<double>> buf=creatematrix(A.size(),depth);
     for(int iter=0;iter<num_head;iter++)
     {
-        for(int i=0;i<A.size();i++)
+        for(unsigned int i=0;i<A.size();i++)
         {
             for(int j=0;j<depth;j++)
             {
@@ -629,8 +595,6 @@ std::vector<std::vector<std::vector<double>>> reshape(const std::vector<std::vec
 std::vector<std::vector<double>> reshape(const std::vector<std::vector<std::vector<double>>>& A)
 {
     int depth=A.size();
-    int row=A[0].size();
-    int column=A[0][0].size();
     std::vector<std::vector<double>> AT=A[0];
     for(int i=1;i<depth;i++)
     {
@@ -641,17 +605,23 @@ std::vector<std::vector<double>> reshape(const std::vector<std::vector<std::vect
 //softmax where axit = -1
 std::vector<double> softmax(const std::vector<double>& A)
 {
-    double sum_a=0;
-    for(int i=0;i<A.size();i++)
+    double total=0;
+	double MAX=A[0];
+	for(auto x:A)
+	{
+		MAX=std::max(x,MAX);
+	}
+    std::vector<double> result;
+    for(auto x:A)
     {
-        sum_a+=exp(A[i]);
+        result.push_back(exp(x-MAX));
+        total += result.back();
     }
-    std::vector<double> AT;
-    for(int i=0;i<A.size();i++)
+    for(unsigned int i = 0; i < A.size(); i++)
     {
-        AT.push_back(exp(A[i])/sum_a);
+        result[i] /= total;
     }
-    return AT;
+	return result;
 }
 
 std::vector<std::vector<std::vector<double>>> softmax(const std::vector<std::vector<std::vector<double>>>& A, int axis=-1)
@@ -659,10 +629,10 @@ std::vector<std::vector<std::vector<double>>> softmax(const std::vector<std::vec
     //axis ignored because it haven't been implemented. 
     std::vector<std::vector<std::vector<double>>> AT;
     
-    for(int i=0;i<A.size();i++)
+    for(unsigned int i=0;i<A.size();i++)
     {
         std::vector<std::vector<double>> buf;
-        for(int j=0;j<A[0].size();j++)
+        for(unsigned int j=0;j<A[0].size();j++)
         {
             buf.push_back(softmax(A[i][j]));
         }
@@ -674,7 +644,7 @@ std::vector<std::vector<std::vector<double>>> softmax(const std::vector<std::vec
 std::vector<std::vector<double>> diag_matrix(const std::vector<double>& A)
 {
     std::vector<std::vector<double>> AT=creatematrix(A.size(),A.size());
-    for(int i=0;i<A.size();i++)
+    for(unsigned int i=0;i<A.size();i++)
     {
         AT[i][i]=A[i];
     }
@@ -716,7 +686,7 @@ std::vector<double> arange(double start, double stop, double step)
 std::vector<std::vector<double>> hsplit(std::vector<std::vector<double>>& A, int start, int stop)
 {
     std::vector<std::vector<double>> AT=creatematrix(A.size(),stop-start);
-    for(int i=0;i<A.size();i++)
+    for(unsigned int i=0;i<A.size();i++)
     {
         for(int j=start;j<stop;j++)
         {
@@ -747,20 +717,27 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
     std::ifstream ifs_hyper(hyperparams_file.c_str());
     while(std::getline(ifs_hyper, line))
     {
+        if (!ifs_hyper) {
+            throw std::runtime_error("I/O error while reading " + hyperparams_file);
+        }
         std::vector<std::string> splited_data;
         colvarparse::split_string(line,std::string(":"),splited_data);
-        if(startswith(line,"num_colvars"))
-        {
-            m_input_size=std::stod(splited_data[1]);
-        }else if(startswith(line,"d_model"))
-        {
-            m_d_model=std::stod(splited_data[1]);
-        }else if(startswith(line,"num_head"))
-        {
-            m_num_head=std::stod(splited_data[1]);
-        }else
-        {
-            cvm::error("No hyperparameter called "+splited_data[0]);
+        try{
+            if(startswith(line,"num_colvars"))
+            {
+                m_input_size=std::stod(splited_data[1]);
+            }else if(startswith(line,"d_model"))
+            {
+                m_d_model=std::stod(splited_data[1]);
+            }else if(startswith(line,"num_head"))
+            {
+                m_num_head=std::stod(splited_data[1]);
+            }else
+            {
+                cvm::error("No hyperparameter called "+splited_data[0] + ", omitted. ");
+            }
+        } catch (...) {
+            throw std::runtime_error("Cannot convert " + splited_data[1] + " to a number while reading file " + hyperparams_file);
         }
     }
     //read wq, wk, wv, wo
@@ -782,7 +759,11 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
         std::vector<double> weights_tmp(splited_data.size());
         for (size_t i = 0; i < splited_data.size(); ++i) 
         {
-            weights_tmp[i] = std::stod(splited_data[i]);
+            try{
+                weights_tmp[i] = std::stod(splited_data[i]);
+            } catch (...) {
+            throw std::runtime_error("Cannot convert " + splited_data[i] + " to a number while reading file " + weights_file);
+            }
         }
         m_q_weights.push_back(weights_tmp);
     }
@@ -800,7 +781,11 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
         std::vector<double> weights_tmp(splited_data.size());
         for (size_t i = 0; i < splited_data.size(); ++i) 
         {
-            weights_tmp[i] = std::stod(splited_data[i]);
+            try{
+                weights_tmp[i] = std::stod(splited_data[i]);
+            } catch (...) {
+            throw std::runtime_error("Cannot convert " + splited_data[i] + " to a number while reading file " + weights_file);
+            }
         }
         m_k_weights.push_back(weights_tmp);
     }
@@ -818,7 +803,11 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
         std::vector<double> weights_tmp(splited_data.size());
         for (size_t i = 0; i < splited_data.size(); ++i) 
         {
-            weights_tmp[i] = std::stod(splited_data[i]);
+            try{
+                weights_tmp[i] = std::stod(splited_data[i]);
+            } catch (...) {
+            throw std::runtime_error("Cannot convert " + splited_data[i] + " to a number while reading file " + weights_file);
+            }
         }
         m_v_weights.push_back(weights_tmp);
     }
@@ -836,7 +825,11 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
         std::vector<double> weights_tmp(splited_data.size());
         for (size_t i = 0; i < splited_data.size(); ++i) 
         {
-            weights_tmp[i] = std::stod(splited_data[i]);
+            try{
+                weights_tmp[i] = std::stod(splited_data[i]);
+            } catch (...) {
+            throw std::runtime_error("Cannot convert " + splited_data[i] + " to a number while reading file " + weights_file);
+            }
         }
         m_o_weights.push_back(weights_tmp);
     }
@@ -850,7 +843,11 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
             i--;
             continue;
         }
-        m_q_biases.push_back(std::stod(line));
+        try{
+            m_q_biases.push_back(std::stod(line));
+        } catch (...) {
+            throw std::runtime_error("Cannot convert " + line + " to a number while reading file " + biases_file);
+        }
     }
     for(size_t i=0;i<getD_model();i++)
     {
@@ -860,7 +857,11 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
             i--;
             continue;
         }
-        m_k_biases.push_back(std::stod(line));
+        try{
+            m_k_biases.push_back(std::stod(line));
+        } catch (...) {
+            throw std::runtime_error("Cannot convert " + line + " to a number while reading file " + biases_file);
+        }
     }
     for(size_t i=0;i<getD_model();i++)
     {
@@ -870,7 +871,11 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
             i--;
             continue;
         }
-        m_v_biases.push_back(std::stod(line));
+        try{
+            m_v_biases.push_back(std::stod(line));
+        } catch (...) {
+            throw std::runtime_error("Cannot convert " + line + " to a number while reading file " + biases_file);
+        }
     }
     for(size_t i=0;i<getD_model();i++)
     {
@@ -880,7 +885,11 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
             i--;
             continue;
         }
-        m_o_biases.push_back(std::stod(line));
+        try{
+            m_o_biases.push_back(std::stod(line));
+        } catch (...) {
+            throw std::runtime_error("Cannot convert " + line + " to a number while reading file " + biases_file);
+        }
     }
     m_output_size = m_input_size;//why not the end of array m_weights?
 }
@@ -892,8 +901,8 @@ std::vector<double> AttentionLayer::compute(const std::vector<double>& input) co
     std::vector<std::vector<double>> v=q;//total assignment
     std::vector<std::vector<double>> buf=creatematrix(q.size(),1,1);//all one matrix
     std::vector<std::vector<double>> q_expand=hstack(q,buf);
-    std::vector<std::vector<double>> k_expand=q_expand;
-    std::vector<std::vector<double>> v_expand=q_expand;
+    // std::vector<std::vector<double>> k_expand=q_expand;
+    // std::vector<std::vector<double>> v_expand=q_expand;
     q=matmul(q_expand,vstack(m_q_weights,reshape(m_q_biases,1,m_q_biases.size())));
     k=matmul(q_expand,vstack(m_k_weights,reshape(m_k_biases,1,m_k_biases.size())));
     v=matmul(q_expand,vstack(m_v_weights,reshape(m_v_biases,1,m_v_biases.size())));
@@ -901,20 +910,20 @@ std::vector<double> AttentionLayer::compute(const std::vector<double>& input) co
     std::vector<std::vector<std::vector<double>>> k_mul=reshape(k,m_num_head,true);//split head
     std::vector<std::vector<std::vector<double>>> v_mul=reshape(v,m_num_head,true);
     std::vector<std::vector<std::vector<double>>> qk_mul;
-    for(int i=0;i<m_num_head;i++)//iterate according to heads
+    for(unsigned int i=0;i<m_num_head;i++)//iterate according to heads
     {
         qk_mul.push_back(multiply_num(matmul(q_mul[i],transpose(k_mul[i])),1/sqrt(m_d_model/m_num_head)));//shape=(num_head,seq_len_q,seq_len_k)
     }
     qk_mul=softmax(qk_mul);
     std::vector<std::vector<std::vector<double>>> scaled_qkv;
-    for(int i=0;i<m_num_head;i++)
+    for(unsigned int i=0;i<m_num_head;i++)
     {
         //shape=(num_head, seq_len_v, depth=d_model/num_head)
         scaled_qkv.push_back(matmul(qk_mul[i],v_mul[i]));
     }
     std::vector<std::vector<double>> concate_qkv=reshape(scaled_qkv);//shape=(seq_len, d_model)
     concate_qkv=matmul(hstack(concate_qkv,buf),vstack(m_o_weights,reshape(m_o_biases,1,m_o_biases.size())));
-    std::vector<double> output=concat(concate_qkv,m_input_size);
+    std::vector<double> output=concat(concate_qkv);
     return output;
 }
 
@@ -932,8 +941,8 @@ std::vector<std::vector<double>> AttentionLayer::computeGradient(const std::vect
     std::vector<std::vector<double>> v=q;//total assignment
     std::vector<std::vector<double>> buf_1=creatematrix(q.size(),1,1);//all one matrix
     std::vector<std::vector<double>> q_expand=hstack(q,buf_1);
-    std::vector<std::vector<double>> k_expand=q_expand;
-    std::vector<std::vector<double>> v_expand=q_expand;
+    // std::vector<std::vector<double>> k_expand=q_expand;
+    // std::vector<std::vector<double>> v_expand=q_expand;
     std::vector<std::vector<std::vector<double>>> q_mul,k_mul,v_mul;
     std::vector<std::vector<std::vector<double>>> qk_mul(m_num_head,std::vector<std::vector<double>>(0));
     std::vector<std::vector<std::vector<double>>> qk_mul_sof;
@@ -948,20 +957,20 @@ std::vector<std::vector<double>> AttentionLayer::computeGradient(const std::vect
     q=matmul(q_expand,vstack(m_q_weights,reshape(m_q_biases,1,m_q_biases.size())));
     q_mul=reshape(q,m_num_head,true);//shape=(num_head,seq_len,d_model/num_head)
 
-    k=matmul(k_expand,vstack(m_k_weights,reshape(m_k_biases,1,m_k_biases.size())));
+    k=matmul(q_expand,vstack(m_k_weights,reshape(m_k_biases,1,m_k_biases.size())));
     k_mul=reshape(k,m_num_head,true);//split head
 
-    v=matmul(v_expand,vstack(m_v_weights,reshape(m_v_biases,1,m_v_biases.size())));
+    v=matmul(q_expand,vstack(m_v_weights,reshape(m_v_biases,1,m_v_biases.size())));
     v_mul=reshape(v,m_num_head,true);
 
-    for(int i=0;i<m_num_head;i++)//iterate according to heads
+    for(unsigned int i=0;i<m_num_head;i++)//iterate according to heads
     {
         qk_mul[i]=(multiply_num(matmul(q_mul[i],transpose(k_mul[i])),1/sqrt(m_d_model/m_num_head)));//shape=(num_head,seq_len_q,seq_len_k)
     }
 
     qk_mul_sof=softmax(qk_mul);
 
-    for(int i=0;i<m_num_head;i++)
+    for(unsigned int i=0;i<m_num_head;i++)
     {   
         //shape=(num_head, seq_len_v, depth=d_model/num_head)
         scaled_qkv[i]=(matmul(qk_mul_sof[i],v_mul[i]));
@@ -969,14 +978,14 @@ std::vector<std::vector<double>> AttentionLayer::computeGradient(const std::vect
 
     concate_qkv=reshape(scaled_qkv);//shape=(seq_len, d_model)
     concate_qkv=matmul(hstack(concate_qkv,buf_1),vstack(m_o_weights,reshape(m_o_biases,1,m_o_biases.size())));
-    output=concat(concate_qkv,m_input_size);
+    output=concat(concate_qkv);
     //compute value to an END
     X=transpose(reshape(input,int(m_d_model),int(m_input_size/m_d_model)));//Notice that here is not q, because q=xw.  
     //recurrent in the matrix
 
     for(int row=0;row<seq_len;row++)
     {
-    for(int column=0;column<m_d_model;column++)
+    for(unsigned int column=0;column<m_d_model;column++)
     {
     std::vector<std::vector<std::vector<double>>> part1=qk_mul_sof;//shape=(num_head,seq_len_q,seq_len_k)
     std::vector<std::vector<std::vector<double>>> part2=reshape(matmul(one_hot_matrix(X,row,column),m_v_weights),m_num_head,true);//shape=(num_head,seq_len,depth)
@@ -988,7 +997,7 @@ std::vector<std::vector<double>> AttentionLayer::computeGradient(const std::vect
     part3_2=plus(part3_2,matmul(reshape(matmul(one_hot_matrix(X,row,column),m_q_weights),m_num_head,true),transpose(k_mul)));//shape=(num_head, seq_len, seq_len)
     part3_2=multiply_num(part3_2,1/sqrt(depth));
     std::vector<std::vector<double>> buf;
-    for(int head_i=0;head_i<m_num_head;head_i++)
+    for(unsigned int head_i=0;head_i<m_num_head;head_i++)
     {
         for(int seq_len_i=0;seq_len_i<seq_len;seq_len_i++)
         {
@@ -1009,9 +1018,9 @@ std::vector<std::vector<double>> AttentionLayer::computeGradient(const std::vect
     result_mul=plus(result_mul,part34);
     std::vector<std::vector<double>> result=reshape(result_mul);
     result=matmul(hstack(result,buf_1),vstack(m_o_weights,reshape(m_o_biases,1,m_o_biases.size())));
-    std::vector<double> result_output=concat(result,m_output_size);
+    std::vector<double> result_output=concat(result);
     
-    for(int output_i=0;output_i<m_output_size;output_i++)
+    for(unsigned int output_i=0;output_i<m_output_size;output_i++)
     {
         output_grad[output_i][column*seq_len+row]=result_output[output_i];
     }
@@ -1027,7 +1036,6 @@ std::ostream& AttentionLayer::showInfo(std::ostream& os)
     os<<"Matrix WQ with bias: \n";
     for(size_t i=0;i<getD_model();i++)
     {
-        
         for(size_t j=0;j<getD_model();j++)
         {
             outputbuf.append(std::to_string(getWeight_q(i,j))+"\t");
@@ -1099,13 +1107,13 @@ neuralNetworkCompute::neuralNetworkCompute(const std::vector<LayerType>& layer_t
     int num_attentiion=0;
     for (size_t i_layer = 0; i_layer < m_layers_output.size(); ++i_layer) 
     {
-        if(m_layer_types[i_layer]==DENSE)
+        if(m_layer_types[i_layer]==LayerType::DENSE)
         {
             m_layers_output[i_layer].assign(m_dense_layers[num_dense].getOutputSize(),0);
             m_grads_tmp[i_layer].assign(m_dense_layers[num_dense].getOutputSize(),std::vector<double>(m_dense_layers[num_dense].getInputSize(),0));
             num_dense++;
         }
-        else if(m_layer_types[i_layer]==SELFATTENTION)
+        else if(m_layer_types[i_layer]==LayerType::SELFATTENTION)
         {
             m_layers_output[i_layer].assign(m_attention_layers[num_attentiion].getOutputSize(),0);
             m_grads_tmp[i_layer].assign(m_attention_layers[num_attentiion].getOutputSize(),std::vector<double>(m_attention_layers[num_attentiion].getInputSize(),0));
@@ -1123,22 +1131,22 @@ bool neuralNetworkCompute::addLayerTypes(const std::vector<LayerType>& layertype
 bool neuralNetworkCompute::addDenseLayer(const denseLayer& layer) {
     if(m_layer_types.empty())
     {
-        m_layer_types.push_back(DENSE);
+        m_layer_types.push_back(LayerType::DENSE);
         m_dense_layers.push_back(layer);
         m_layers_output.push_back(std::vector<double>(layer.getOutputSize()));
         m_grads_tmp.push_back(std::vector<std::vector<double>>(layer.getOutputSize(), std::vector<double>(layer.getInputSize(), 0)));
         return true;
-    }else if(m_layer_types.back()==DENSE&&m_dense_layers.back().getOutputSize() == layer.getInputSize())
+    }else if(m_layer_types.back()==LayerType::DENSE&&m_dense_layers.back().getOutputSize() == layer.getInputSize())
     {
         // otherwise, we need to check if the output of last layer in m_dense_layers matches the input of layer to be added
-        m_layer_types.push_back(DENSE);
+        m_layer_types.push_back(LayerType::DENSE);
         m_dense_layers.push_back(layer);
         m_layers_output.push_back(std::vector<double>(layer.getOutputSize()));
         m_grads_tmp.push_back(std::vector<std::vector<double>>(layer.getOutputSize(), std::vector<double>(layer.getInputSize(), 0)));
         return true;
-    }else if(m_layer_types.back()==SELFATTENTION&&m_attention_layers.back().getOutputSize()==layer.getInputSize())
+    }else if(m_layer_types.back()==LayerType::SELFATTENTION&&m_attention_layers.back().getOutputSize()==layer.getInputSize())
     {
-        m_layer_types.push_back(DENSE);
+        m_layer_types.push_back(LayerType::DENSE);
         m_dense_layers.push_back(layer);
         m_layers_output.push_back(std::vector<double>(layer.getOutputSize()));
         m_grads_tmp.push_back(std::vector<std::vector<double>>(layer.getOutputSize(), std::vector<double>(layer.getInputSize(), 0)));
@@ -1153,22 +1161,22 @@ bool neuralNetworkCompute::addDenseLayer(const denseLayer& layer) {
 bool neuralNetworkCompute::addAttentionLayer(const AttentionLayer& layer) {
     if(m_layer_types.empty())
     {
-        m_layer_types.push_back(SELFATTENTION);
+        m_layer_types.push_back(LayerType::SELFATTENTION);
         m_attention_layers.push_back(layer);
         m_layers_output.push_back(std::vector<double>(layer.getOutputSize()));
         m_grads_tmp.push_back(std::vector<std::vector<double>>(layer.getOutputSize(), std::vector<double>(layer.getInputSize(), 0)));
         return true;
-    }else if(m_layer_types.back()==DENSE&&m_dense_layers.back().getOutputSize() == layer.getInputSize())
+    }else if(m_layer_types.back()==LayerType::DENSE&&m_dense_layers.back().getOutputSize() == layer.getInputSize())
     {
         // otherwise, we need to check if the output of last layer in m_dense_layers matches the input of layer to be added
-        m_layer_types.push_back(SELFATTENTION);
+        m_layer_types.push_back(LayerType::SELFATTENTION);
         m_attention_layers.push_back(layer);
         m_layers_output.push_back(std::vector<double>(layer.getOutputSize()));
         m_grads_tmp.push_back(std::vector<std::vector<double>>(layer.getOutputSize(), std::vector<double>(layer.getInputSize(), 0)));
         return true;
-    }else if(m_layer_types.back()==SELFATTENTION&&m_attention_layers.back().getOutputSize()==layer.getInputSize())
+    }else if(m_layer_types.back()==LayerType::SELFATTENTION&&m_attention_layers.back().getOutputSize()==layer.getInputSize())
     {
-        m_layer_types.push_back(SELFATTENTION);
+        m_layer_types.push_back(LayerType::SELFATTENTION);
         m_attention_layers.push_back(layer);
         m_layers_output.push_back(std::vector<double>(layer.getOutputSize()));
         m_grads_tmp.push_back(std::vector<std::vector<double>>(layer.getOutputSize(), std::vector<double>(layer.getInputSize(), 0)));
@@ -1187,14 +1195,14 @@ void neuralNetworkCompute::compute() {
     int num_dense=0;
     int num_attention=0;
     std::vector<double> last_output=m_input;
-    for(int i_layer=0;i_layer<m_layer_types.size();i_layer++)
+    for(unsigned int i_layer=0;i_layer<m_layer_types.size();i_layer++)
     {
-        if(m_layer_types[i_layer]==DENSE)
+        if(m_layer_types[i_layer]==LayerType::DENSE)
         {
             m_dense_layers[num_dense].compute(last_output, m_layers_output[i_layer]);
             last_output=m_layers_output[i_layer];
             num_dense++;
-        }else if(m_layer_types[i_layer]==SELFATTENTION)
+        }else if(m_layer_types[i_layer]==LayerType::SELFATTENTION)
         {
             m_layers_output[i_layer]=m_attention_layers[num_attention].compute(last_output);
             last_output=m_layers_output[i_layer];
@@ -1217,14 +1225,14 @@ void neuralNetworkCompute::compute() {
     last_output=m_input;
     num_dense=0;
     num_attention=0;
-    for(int i_layer=0;i_layer<m_layer_types.size();i_layer++)
+    for(unsigned int i_layer=0;i_layer<m_layer_types.size();i_layer++)
     {
-        if(m_layer_types[i_layer]==DENSE)
+        if(m_layer_types[i_layer]==LayerType::DENSE)
         {
             m_dense_layers[num_dense].computeGradient(last_output, m_grads_tmp[i_layer]);
             last_output=m_layers_output[i_layer];
             num_dense++;
-        }else if(m_layer_types[i_layer]==SELFATTENTION)
+        }else if(m_layer_types[i_layer]==LayerType::SELFATTENTION)
         {
             m_grads_tmp[i_layer]=m_attention_layers[num_attention].computeGradient(last_output);
             last_output=m_layers_output[i_layer];
@@ -1258,7 +1266,6 @@ void neuralNetworkCompute::compute() {
         }
         */
     } else {
-        std::cout<<"No layer specified in the model. "<<std::endl;
         m_chained_grad = m_grads_tmp[0];
     }
 }

@@ -59,11 +59,11 @@ int colvar::neuralNetwork::init(std::string const &conf)
         //std::cout<<line<<std::endl;
         if(startswith(line, "dense"))
         {
-            layer_types.push_back(DENSE);
+            layer_types.push_back(LayerType::DENSE);
         }
         else if(startswith(line, "colvar_attention"))
         {
-            layer_types.push_back(SELFATTENTION);
+            layer_types.push_back(LayerType::SELFATTENTION);
         }else
         {
             cvm::error("Invalid layer. This may not be accomplished. Please name your layer accordingly. ");
@@ -199,7 +199,7 @@ int colvar::neuralNetwork::init(std::string const &conf)
     nn = std::unique_ptr<neuralnetworkCV::neuralNetworkCompute>(new neuralnetworkCV::neuralNetworkCompute());
     for(LayerType iter:layer_types)
     {
-        if(iter==DENSE)
+        if(iter==LayerType::DENSE)
         {
         denseLayer d;
 #ifdef LEPTON
@@ -243,7 +243,7 @@ int colvar::neuralNetwork::init(std::string const &conf)
             return cvm::error("Error: error on adding a new dense layer.\n", COLVARS_INPUT_ERROR);
         }
         i_layer++;
-    }else if(iter==SELFATTENTION)
+    }else if(iter==LayerType::SELFATTENTION)
         {
             AttentionLayer d = AttentionLayer(attention_weights_files[num_attention_weights], attention_biases_files[num_attention_weights], hyperparam_files[num_attention_weights]);
             
