@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 #include "colvar_neuralnetworkcompute.h"
 #include "colvarparse.h"
 #include "colvarproxy.h"
@@ -897,15 +898,18 @@ void AttentionLayer::readFromFile(const std::string& weights_file, const std::st
 // \brief calculate the output value of particular layer, with bias
 std::vector<double> AttentionLayer::compute(const std::vector<double>& input) const {
     std::vector<std::vector<double>> q=transpose(reshape(input,int(m_d_model),int(m_input_size/m_d_model)));//seq_len*d_model
-    std::vector<std::vector<double>> k=q;//shape=(seq_len_k,d_model)
-    std::vector<std::vector<double>> v=q;//total assignment
-    std::vector<std::vector<double>> buf=creatematrix(q.size(),1,1);//all one matrix
-    std::vector<std::vector<double>> q_expand=hstack(q,buf);
     // std::vector<std::vector<double>> k_expand=q_expand;
     // std::vector<std::vector<double>> v_expand=q_expand;
-    q=matmul(q_expand,vstack(m_q_weights,reshape(m_q_biases,1,m_q_biases.size())));
-    k=matmul(q_expand,vstack(m_k_weights,reshape(m_k_biases,1,m_k_biases.size())));
-    v=matmul(q_expand,vstack(m_v_weights,reshape(m_v_biases,1,m_v_biases.size())));
+    std::vector<std::vector<double>> buf=creatematrix(q.size(),1,1);//all one matrix
+    q = matmul(q, m_q_weights);
+    std::vector<std::vector<double>> k = matmul(q, m_k_weights); //shape=(seq_len_k,d_model)
+    std::vector<std::vector<double>> v = matmul(q, m_v_weights); //total assignment
+    for(unsigned int i = 0; i < q.size(); i++)
+    {
+        std::transform(q[i].begin(), q[i].end(), m_q_biases.begin(), q[i].begin(), std::plus<double>());
+        std::transform(k[i].begin(), k[i].end(), m_k_biases.begin(), k[i].begin(), std::plus<double>());
+        std::transform(v[i].begin(), v[i].end(), m_v_biases.begin(), v[i].begin(), std::plus<double>());
+    }
     std::vector<std::vector<std::vector<double>>> q_mul=reshape(q,m_num_head,true);//shape=(num_head,seq_len,d_model/num_head)
     std::vector<std::vector<std::vector<double>>> k_mul=reshape(k,m_num_head,true);//split head
     std::vector<std::vector<std::vector<double>>> v_mul=reshape(v,m_num_head,true);
