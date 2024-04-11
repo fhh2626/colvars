@@ -22,6 +22,7 @@
 #endif
 
 namespace neuralnetworkCV {
+enum class LayerType {DENSE, SELFATTENTION, INVALID};
 /// mapping from a string to the activation function and its derivative
 extern std::map<std::string, std::pair<std::function<double(double)>, std::function<double(double)>>> activation_function_map;
 
@@ -113,19 +114,93 @@ public:
     }
     ~denseLayer() {}
 };
+class AttentionLayer {
+private:
+    size_t m_input_size;
+    size_t m_output_size;
+    size_t m_d_model;
+    size_t m_num_head;
+    /// weights[i][j] is the weight of the i-th output and the j-th input
+    std::vector<std::vector<double>> m_q_weights;
+    std::vector<std::vector<double>> m_k_weights;
+    std::vector<std::vector<double>> m_v_weights;
+    std::vector<std::vector<double>> m_o_weights;
+    /// bias of each node
+    std::vector<double> m_q_biases;
+    std::vector<double> m_k_biases;
+    std::vector<double> m_v_biases;
+    std::vector<double> m_o_biases;
 
+public:
+    /// empty constructor
+    AttentionLayer(){}
+    /*! @param[in]  weights_file    filename of the weights file
+     *  @param[in]  biases_file     filename of the biases file
+     *  @param[in]  hyperparameter  filename of the hyperparameter file
+     */
+    AttentionLayer(const std::string& weights_file, const std::string& biases_file, const std::string& hyperparam_file);
+
+    /// read data from file
+    void readFromFile(const std::string& weights_file, const std::string& biases_file, const std::string& hyperparam_file);
+    /// compute the value of this layer
+    std::vector<double> compute(const std::vector<double>& input) const;
+    /// output[i][j] is the gradient of i-th output wrt j-th input
+    std::vector<std::vector<double>> computeGradient(const std::vector<double>& input) const;
+    /// dump info
+    std::ostream& showInfo(std::ostream& os);
+    /// get the input size
+    size_t getInputSize() const {
+        return m_input_size;
+    }
+    size_t getOutputSize() const {
+        return m_output_size;
+    }
+    /// get the d_model, which is the number of channels. 
+    size_t getD_model() const 
+    {
+        return m_d_model;
+    }
+    /// getter for weights and biases
+    double getWeight_q(size_t i, size_t j) const {
+        return m_q_weights[i][j];
+    }
+    double getWeight_k(size_t i, size_t j) const {
+        return m_k_weights[i][j];
+    }
+    double getWeight_v(size_t i, size_t j) const {
+        return m_v_weights[i][j];
+    }
+    double getWeight_o(size_t i, size_t j) const {
+        return m_o_weights[i][j];
+    }
+    double getBias_q(size_t i) const {
+        return m_q_biases[i];
+    }
+    double getBias_k(size_t i) const {
+        return m_k_biases[i];
+    }
+    double getBias_v(size_t i) const {
+        return m_v_biases[i];
+    }
+    double getBias_o(size_t i) const {
+        return m_o_biases[i];
+    }
+
+    ~AttentionLayer() {}
+};
 class neuralNetworkCompute {
 private:
+    std::vector<LayerType> m_layer_types;
+    std::vector<AttentionLayer> m_attention_layers;
     std::vector<denseLayer> m_dense_layers;
     std::vector<double> m_input;
     /// temporary output for each layer, useful to speedup the gradients' calculation
     std::vector<std::vector<double>> m_layers_output;
     std::vector<std::vector<std::vector<double>>> m_grads_tmp;
     std::vector<std::vector<double>> m_chained_grad;
-private:
+public:
     /// helper function: multiply two matrix constructed from 2D vector
     static std::vector<std::vector<double>> multiply_matrix(const std::vector<std::vector<double>>& A, const std::vector<std::vector<double>>& B);
-public:
     neuralNetworkCompute(): m_dense_layers(0), m_layers_output(0) {}
     neuralNetworkCompute(const std::vector<denseLayer>& dense_layers);
     bool addDenseLayer(const denseLayer& layer);
@@ -140,6 +215,15 @@ public:
     const denseLayer& getLayer(const size_t i) const {return m_dense_layers[i];}
     /// get the number of layers
     size_t getNumberOfLayers() const {return m_dense_layers.size();}
+    bool addLayerTypes(const std::vector<LayerType>& LayerTypes);
+    bool addAttentionLayer(const AttentionLayer& layer);
+    /// get the number of layers
+    double computeGradient(const std::vector<std::vector<double>>& input, const size_t i, const size_t j) const;
+    /// compute the gradient of i-th output wrt j-th input
+    double computeGradient(const std::vector<double>& input, const size_t i, const size_t j) const;
+    /// compute the numerical gradient of i-th output wrt j-th input
+    double computeNumericalGradient(const std::vector<double>& input, const size_t i, const size_t j, const double epsilon = 0.0001) const;
+    neuralNetworkCompute(const std::vector<LayerType>& layer_types, const std::vector<denseLayer>& dense_layers, const std::vector<AttentionLayer>& attention_layers);
 };
 
 }

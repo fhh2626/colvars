@@ -6,7 +6,13 @@
 // Please update all Colvars source files before making any changes.
 // If you wish to distribute your changes, please submit them to the
 // Colvars repository at GitHub.
-
+#include <numeric>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
+#include <limits>
+#include <utility>
+#include <fstream>
 #include "colvarmodule.h"
 #include "colvarvalue.h"
 #include "colvar.h"
@@ -14,7 +20,19 @@
 #include "colvar_neuralnetworkcompute.h"
 
 using namespace neuralnetworkCV;
-
+bool startswith(std::string long_str, std::string short_str)
+{
+	int len=short_str.length();
+	for(int i=0;i<len;i++)
+	{
+		if(long_str[i]!=short_str[i])
+		{
+			return false;
+		}
+	}
+	
+	return true;
+}
 
 colvar::neuralNetwork::neuralNetwork()
 {
@@ -29,6 +47,28 @@ int colvar::neuralNetwork::init(std::string const &conf)
     // the output of neural network consists of multiple values
     // read "output_component" key to determine it
     get_keyval(conf, "output_component", m_output_index);
+    // read type of each layer
+    //record the type of each layer
+    std::vector<LayerType> layer_types;
+    std::string layer_type_file;
+    get_keyval(conf,"Layer_Types",layer_type_file, std::string(""));
+    //std::cout<<layer_type_file<<std::endl;
+    std::string line;
+    std::ifstream ifs_types(layer_type_file.c_str());
+    while (std::getline(ifs_types, line)) {
+        //std::cout<<line<<std::endl;
+        if(startswith(line, "dense"))
+        {
+            layer_types.push_back(LayerType::DENSE);
+        }
+        else if(startswith(line, "colvar_attention"))
+        {
+            layer_types.push_back(LayerType::SELFATTENTION);
+        }else
+        {
+            cvm::error("Invalid layer. This may not be accomplished. Please name your layer accordingly. ");
+        }
+    }
     // read weight files
     bool has_weight_files = true;
     size_t num_layers_weight = 0;
@@ -92,17 +132,75 @@ int colvar::neuralNetwork::init(std::string const &conf)
             has_activation_functions = false;
         }
     }
+    //attention layer params
+    bool has_attention_hyperparams=true;
+    size_t num_attention_hyperparam=0;
+    bool has_attention_weights=true;
+    size_t num_attention_weights=0;
+    bool has_attention_biases=true;
+    size_t num_attention_biases=0;
+    std::vector<std::string> hyperparam_files;
+    std::vector<std::string> attention_weights_files;
+    std::vector<std::string> attention_biases_files;
+    //read weights of atttention layers
+    while (has_attention_weights) {
+        std::string lookup_key = std::string{"Attention"} + cvm::to_str(num_attention_weights + 1) + std::string{"_WeightsFile"};
+        if(key_lookup(conf,lookup_key.c_str())){
+            std::string weights_filename;
+            get_keyval(conf, lookup_key.c_str(), weights_filename, std::string(""));
+            attention_weights_files.push_back(weights_filename);
+            cvm::log(std::string{"Will read self-attention layer["} + cvm::to_str(num_attention_weights + 1) + std::string{"] weights from "} + weights_filename + '\n');
+            num_attention_weights++;
+        }else{
+                has_attention_weights=false;
+        }
+    }
+    //read biases of atttention layers
+    while (has_attention_biases) {
+        std::string lookup_key = std::string{"Attention"} + cvm::to_str(num_attention_biases + 1) + std::string{"_BiasesFile"};
+        if(key_lookup(conf,lookup_key.c_str())){
+            std::string bias_filename;
+            get_keyval(conf, lookup_key.c_str(), bias_filename, std::string(""));
+            attention_biases_files.push_back(bias_filename);
+            cvm::log(std::string{"Will read self-attention layer["} + cvm::to_str(num_attention_biases + 1) + std::string{"] biases from "} + bias_filename + '\n');
+            num_attention_biases++;
+        }else{
+                has_attention_biases=false;
+        }
+    }
+    //std::cout<<"read biase files of attention layer "<<std::endl;
+    //read biases of atttention layers
+    while (has_attention_hyperparams) {
+        std::string lookup_key = std::string{"Attention"} + cvm::to_str(num_attention_hyperparam + 1) + std::string{"_HyperparamFile"};
+        if(key_lookup(conf,lookup_key.c_str())){
+            std::string hyperparam_filename;
+            get_keyval(conf, lookup_key.c_str(), hyperparam_filename, std::string(""));
+            hyperparam_files.push_back(hyperparam_filename);
+            cvm::log(std::string{"Will read self-attention layer["} + cvm::to_str(num_attention_hyperparam + 1) + std::string{"] hyperparameters from "} + hyperparam_filename + '\n');
+            num_attention_hyperparam++;
+        }else{
+                has_attention_hyperparams=false;
+        }
+    }
     // expect the three numbers are equal
     if ((num_layers_weight != num_layers_bias) || (num_layers_bias != num_activation_functions)) {
         return cvm::error(
             "Error: the numbers of weights, biases and activation functions do not match.\n",
             COLVARS_INPUT_ERROR);
     }
+    if ((num_attention_weights != num_attention_biases) || (num_attention_biases != num_attention_hyperparam)) {
+        cvm::error("Error: the number of weights, biases and hyperparameters for self-attention layer do not match.\n");
+    }
+    num_attention_weights=0;
+    int i_layer=0;
 //     nn = std::make_unique<neuralnetworkCV::neuralNetworkCompute>();
     // std::make_unique is only available in C++14
     if (nn) nn.reset();
     nn = std::unique_ptr<neuralnetworkCV::neuralNetworkCompute>(new neuralnetworkCV::neuralNetworkCompute());
-    for (size_t i_layer = 0; i_layer < num_layers_weight; ++i_layer) {
+    for(LayerType iter:layer_types)
+    {
+        if(iter==LayerType::DENSE)
+        {
         denseLayer d;
 #ifdef LEPTON
         if (activation_functions[i_layer].first) {
@@ -143,6 +241,84 @@ int colvar::neuralNetwork::init(std::string const &conf)
             }
         } else {
             return cvm::error("Error: error on adding a new dense layer.\n", COLVARS_INPUT_ERROR);
+        }
+        i_layer++;
+    }else if(iter==LayerType::SELFATTENTION)
+        {
+            AttentionLayer d = AttentionLayer(attention_weights_files[num_attention_weights], attention_biases_files[num_attention_weights], hyperparam_files[num_attention_weights]);
+            
+            // add a new attention layer to network
+            if (nn->addAttentionLayer(d)) {
+                // show information about the neural network
+                cvm::log("Attention layer " + cvm::to_str(num_attention_weights)+"\n");
+                std::string outputbuf="";
+                cvm::log("Matrix WQ with bias: \n");
+                for(size_t i=0;i<d.getD_model();i++)
+                {
+                    
+                    for(size_t j=0;j<d.getD_model();j++)
+                    {
+                        outputbuf.append(std::to_string(d.getWeight_q(i,j))+"\t");
+                    }
+                    outputbuf.append("\n");
+                    cvm::log(outputbuf);
+                    outputbuf="";
+                    outputbuf.append(std::to_string(d.getBias_q(i))+"\t");
+                }
+                cvm::log(outputbuf);
+                outputbuf="";
+                cvm::log("Matrix WQ: \n");
+                for(size_t i=0;i<d.getD_model();i++)
+                {
+                    
+                    for(size_t j=0;j<d.getD_model();j++)
+                    {
+                        outputbuf.append(std::to_string(d.getWeight_k(i,j))+"\t");
+                    }
+                    outputbuf.append("\n");
+                    cvm::log(outputbuf);
+                    outputbuf="";
+                    outputbuf.append(std::to_string(d.getBias_k(i))+"\t");
+                }
+                cvm::log(outputbuf);
+                outputbuf="";
+                cvm::log("Matrix WQ: \n");
+                for(size_t i=0;i<d.getD_model();i++)
+                {
+                    
+                    for(size_t j=0;j<d.getD_model();j++)
+                    {
+                        outputbuf.append(std::to_string(d.getWeight_v(i,j))+"\t");
+                    }
+                    outputbuf.append("\n");
+                    cvm::log(outputbuf);
+                    outputbuf="";
+                    outputbuf.append(std::to_string(d.getBias_v(i))+"\t");
+                }
+                cvm::log(outputbuf);
+                outputbuf="";
+                cvm::log("Matrix WQ: \n");
+                for(size_t i=0;i<d.getD_model();i++)
+                {
+                    
+                    for(size_t j=0;j<d.getD_model();j++)
+                    {
+                        outputbuf.append(std::to_string(d.getWeight_o(i,j))+"\t");
+                    }
+                    outputbuf.append("\n");
+                    cvm::log(outputbuf);
+                    outputbuf="";
+                    outputbuf.append(std::to_string(d.getBias_o(i))+"\t");
+                }
+                cvm::log(outputbuf);
+                outputbuf="";
+            } else {
+            cvm::error("Error: error on adding a new self attention layer.\n");
+            }
+            num_attention_weights++;
+        } else
+        {
+            cvm::error("Invalid layer. This may not been accomplished.");
         }
     }
     nn->input().resize(cv.size());
